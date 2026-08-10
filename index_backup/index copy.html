@@ -1,0 +1,272 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="refresh" content="300" /> <!-- 5분마다 자동 갱신 -->
+<title>연구실 공지</title>
+<!-- ↓ 리포 이름에 맞춰 수정 -->
+<base href="./">
+<style>
+  :root { --bg:#ffffff; --card:#ffffff; --acc:#0a66c2; --txt:#111111; --border:#e5e7eb; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,"Noto Sans KR",sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:20px}
+  h1{margin:0 0 14px;font-size:26px}
+  .grid{display:grid;gap:14px;grid-template-columns: repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+  .card h2{margin:0 0 12px;font-size:20px;color:var(--acc)}
+  ul{margin:0;padding-left:20px}
+  .footer{opacity:.7;text-align:center;margin-top:24px;font-size:13px}
+  /* Calendar */
+  .calendar{width:100%}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-title{font-weight:700}
+  .cal-nav{display:flex;gap:8px}
+  .cal-nav button{appearance:none;border:1px solid var(--border);background:#fff;color:#111;padding:6px 10px;border-radius:10px;cursor:pointer}
+  .cal-nav button:hover{background:#f3f4f6}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-cell{padding:10px 0;text-align:center;border-radius:10px;border:1px solid var(--border);background:#fff}
+  .cal-dow{font-weight:600;background:#f8fafc}
+  .cal-muted{opacity:.45}
+  .cal-today{outline:2px solid var(--acc);outline-offset:2px}
+  .calendar-card{grid-column:1 / -1}
+
+  /* Fit for 1024x768: tighten spacing and calendar density */
+  @media (max-width:1024px){
+    .wrap{max-width:100%;padding:12px}
+    h1{font-size:24px;margin-bottom:12px}
+    .grid{gap:12px;grid-template-columns: repeat(auto-fit,minmax(260px,1fr))}
+    .card{padding:14px}
+    .cal-header{margin-bottom:8px}
+    .cal-nav button{padding:4px 8px}
+    .cal-grid{gap:4px}
+    .cal-cell{padding:7px 0}
+  }
+  @media (max-height:800px){
+    .wrap{padding-top:12px;padding-bottom:12px}
+    h1{font-size:24px;margin-bottom:10px}
+    .card{padding:12px}
+    .cal-header{margin-bottom:6px}
+    .cal-nav button{padding:3px 8px}
+    .cal-grid{gap:3px}
+    .cal-cell{padding:6px 0}
+  }
+  /* Event badges */
+  .cal-events{margin-top:6px;display:flex;flex-direction:column;gap:4px;padding:0 6px}
+  .cal-event{display:block;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:8px;background:#eef2ff;color:#1e40af;border:1px solid #c7d2fe;padding:2px 6px;font-size:12px;line-height:1.4}
+</style>
+
+<div class="wrap">
+  <h1>연구실 공지</h1>
+
+  <div class="grid">
+    <section class="card">
+      <h2>오늘 일정</h2>
+      <ul id="today-list">
+        <li>불러오는 중…</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>공지사항</h2>
+      <ul>
+        <li>금요일 모션 캡쳐 시스템 세팅</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>연락처</h2>
+      <ul>
+        <li>관리자: 차명주 (000-0000-0000)</li>
+        <li>Email: gistcmjgmj@gm.gist.ac.kr</li>
+      </ul>
+    </section>
+
+    <section class="card calendar-card">
+      <h2>달력</h2>
+      <div class="calendar">
+        <div class="cal-header">
+          <div class="cal-title" id="cal-title">Loading…</div>
+          <div class="cal-nav">
+            <button type="button" id="cal-prev" aria-label="이전 달">◀</button>
+            <button type="button" id="cal-today" aria-label="오늘">오늘</button>
+            <button type="button" id="cal-next" aria-label="다음 달">▶</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <p style="margin-top:10px;opacity:.7;font-size:13px">개인 일정 연동 없이, 현재 시간 기준으로 생성되는 달력입니다.</p>
+    </section>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>슬라이드(선택)</h2>
+    <!-- 구글 슬라이드 '웹에 게시' 임베드 예시: URL만 바꿔 넣으세요 -->
+    <!-- <iframe src="https://docs.google.com/presentation/d/슬라이드ID/embed?start=true&loop=true&delayms=10000"
+            style="width:100%;height:480px;border:0" allowfullscreen></iframe> -->
+    <p>여기에 슬라이드/이미지/표를 넣어도 좋습니다.</p>
+  </div>
+
+  <p class="footer">© 2025 HUR Lab</p>
+
+  <script>
+    (function(){
+      const gridEl = document.getElementById('cal-grid');
+      const titleEl = document.getElementById('cal-title');
+      const btnPrev = document.getElementById('cal-prev');
+      const btnNext = document.getElementById('cal-next');
+      const btnToday = document.getElementById('cal-today');
+
+      const today = new Date();
+      let viewYear = today.getFullYear();
+      let viewMonth = today.getMonth(); // 0-11
+      let eventsByDate = new Map(); // key: YYYY-MM-DD, value: [{time:'14:00', title:'...'}]
+
+      const weekdayLabels = ['일','월','화','수','목','금','토'];
+
+      function pad2(n){ return String(n).padStart(2,'0'); }
+
+      async function loadEvents(){
+        try{
+          const res = await fetch('events/events.txt', {cache:'no-store'});
+          if (!res.ok) return;
+          const text = await res.text();
+          const lines = text.split(/\r?\n/);
+          const map = new Map();
+          const defaultYear = today.getFullYear();
+          // 허용 형식: [YYYY년 ]M월 D일 (H시[ M분]? | HH:MM) 제목
+          const rx = /^\s*(?:(\d{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(?:(\d{1,2})(?::(\d{2}))?\s*시?|\s*(\d{1,2}):(\d{2}))\s+(.+?)\s*$/;
+          for (const line of lines){
+            if (!line || line.trim().startsWith('#')) continue;
+            const m = line.match(rx);
+            if (!m) continue;
+            const year = m[1] ? Number(m[1]) : defaultYear;
+            const month = Number(m[2]);
+            const day = Number(m[3]);
+            // 시간은 두 케이스로 파싱: 시/분 또는 HH:MM
+            const hourFromSi = m[4] !== undefined ? Number(m[4]) : (m[6] !== undefined ? Number(m[6]) : 0);
+            const minuteFromSi = m[5] !== undefined ? Number(m[5]) : (m[7] !== undefined ? Number(m[7]) : 0);
+            const hour = hourFromSi;
+            const minute = minuteFromSi;
+            const title = m[8];
+            const key = `${year}-${pad2(month)}-${pad2(day)}`;
+            const item = { time: `${pad2(hour)}:${pad2(minute)}`, title };
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(item);
+          }
+          // sort each day's events by time
+          for (const [k, arr] of map){
+            arr.sort((a,b)=> a.time.localeCompare(b.time));
+          }
+          eventsByDate = map;
+        }catch(e){
+          console.warn('이벤트 파일 로드 실패:', e);
+        }
+      }
+
+      function render(){
+        // Title
+        titleEl.textContent = `${viewYear}년 ${String(viewMonth+1).padStart(2,'0')}월`;
+
+        // Clear
+        gridEl.innerHTML = '';
+
+        // Weekday header
+        for (let i=0;i<7;i++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-dow';
+          cell.textContent = weekdayLabels[i];
+          gridEl.appendChild(cell);
+        }
+
+        // Dates
+        const firstOfMonth = new Date(viewYear, viewMonth, 1);
+        const startWeekday = firstOfMonth.getDay(); // 0 Sun - 6 Sat
+        const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+        const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+        // Leading days from previous month
+        for (let i=0; i<startWeekday; i++){
+          const dayNum = daysInPrev - startWeekday + 1 + i;
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-muted';
+          cell.textContent = String(dayNum);
+          gridEl.appendChild(cell);
+        }
+
+        // Current month days
+        for (let d=1; d<=daysInMonth; d++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell';
+          cell.textContent = String(d);
+          if (
+            viewYear === today.getFullYear() &&
+            viewMonth === today.getMonth() &&
+            d === today.getDate()
+          ){
+            cell.classList.add('cal-today');
+          }
+          // Events
+          const eventsKey = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
+          const events = eventsByDate.get(eventsKey);
+          if (events && events.length){
+            const list = document.createElement('div');
+            list.className = 'cal-events';
+            for (const ev of events){
+              const badge = document.createElement('div');
+              badge.className = 'cal-event';
+              badge.textContent = `${ev.time} · ${ev.title}`;
+              list.appendChild(badge);
+            }
+            cell.appendChild(list);
+          }
+          gridEl.appendChild(cell);
+        }
+
+        // Trailing days from next month to fill the grid (rows of 7)
+        const totalCells = gridEl.children.length;
+        const remainder = totalCells % 7;
+        const fill = remainder === 0 ? 0 : 7 - remainder;
+        for (let i=1; i<=fill; i++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-muted';
+          cell.textContent = String(i);
+          gridEl.appendChild(cell);
+        }
+      }
+
+      btnPrev.addEventListener('click', () => {
+        if (viewMonth === 0){ viewMonth = 11; viewYear--; } else { viewMonth--; }
+        render();
+      });
+      btnNext.addEventListener('click', () => {
+        if (viewMonth === 11){ viewMonth = 0; viewYear++; } else { viewMonth++; }
+        render();
+      });
+      btnToday.addEventListener('click', () => {
+        viewYear = today.getFullYear();
+        viewMonth = today.getMonth();
+        render();
+      });
+
+      function updateTodayList(){
+        const list = document.getElementById('today-list');
+        if (!list) return;
+        const key = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+        const items = eventsByDate.get(key) || [];
+        list.innerHTML = '';
+        if (items.length === 0){
+          const li = document.createElement('li');
+          li.textContent = '오늘 일정 없음';
+          list.appendChild(li);
+          return;
+        }
+        for (const ev of items){
+          const li = document.createElement('li');
+          li.textContent = `${ev.time} ${ev.title}`;
+          list.appendChild(li);
+        }
+      }
+
+      loadEvents().then(()=>{ render(); updateTodayList(); });
+    })();
+  </script>
+</div>

@@ -1,0 +1,688 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta http-equiv="refresh" content="300" /> <!-- 5분마다 자동 갱신 -->
+<title>Information Page</title>
+<!-- ↓ 리포 이름에 맞춰 수정 -->
+<base href="./">
+<style>
+  :root { --bg:#ffffff; --card:#ffffff; --acc:#0a66c2; --txt:#111111; --border:#e5e7eb; }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.5 system-ui,"Noto Sans KR",sans-serif}
+     .wrap{max-width:980px;margin:0 auto;padding:12px}
+   h1{margin:0 0 8px;font-size:26px}
+  .grid{display:grid;gap:14px;grid-template-columns: repeat(auto-fit,minmax(280px,1fr))}
+     .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+     .card h2{margin:0 0 16px;font-size:20px;color:var(--acc)}
+  ul{margin:0;padding-left:20px}
+  ul ul{margin:8px 0;padding-left:40px}
+  ul ul li{margin:4px 0;font-size:14px;color:#666;list-style-type:circle}
+  ul ul ul{margin:6px 0;padding-left:30px}
+  ul ul ul li{font-size:13px;color:#888;list-style-type:disc}
+  .footer{opacity:.7;text-align:center;margin-top:24px;font-size:13px}
+  /* Calendar */
+  .calendar{width:100%}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-title{font-weight:700}
+  .cal-nav{display:flex;gap:8px}
+  .cal-nav button{appearance:none;border:1px solid var(--border);background:#fff;color:#111;padding:6px 10px;border-radius:10px;cursor:pointer}
+  .cal-nav button:hover{background:#f3f4f6}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-cell{padding:10px 0;text-align:center;border-radius:10px;border:1px solid var(--border);background:#fff}
+  .cal-dow{font-weight:600;background:#f8fafc}
+  .cal-muted{opacity:.45}
+  .cal-today{outline:2px solid var(--acc);outline-offset:2px}
+  .calendar-card{grid-column:1 / -1}
+
+  /* Fit for 1024x768: tighten spacing and calendar density */
+  @media (max-width:1024px){
+    .wrap{max-width:100%;padding:12px}
+    h1{font-size:24px;margin-bottom:12px}
+    .grid{gap:12px;grid-template-columns: repeat(auto-fit,minmax(260px,1fr))}
+    .card{padding:14px}
+    .cal-header{margin-bottom:8px}
+    .cal-nav button{padding:4px 8px}
+    .cal-grid{gap:4px}
+    .cal-cell{padding:7px 0}
+  }
+  @media (max-height:800px){
+    .wrap{padding-top:12px;padding-bottom:12px}
+    h1{font-size:24px;margin-bottom:10px}
+    .card{padding:12px}
+    .cal-header{margin-bottom:6px}
+    .cal-nav button{padding:3px 8px}
+    .cal-grid{gap:3px}
+    .cal-cell{padding:6px 0}
+  }
+  /* Event badges */
+  .cal-events{margin-top:6px;display:flex;flex-direction:column;gap:4px;padding:0 6px}
+  .cal-event{display:block;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:8px;background:#eef2ff;color:#1e40af;border:1px solid #c7d2fe;padding:2px 6px;font-size:12px;line-height:1.4}
+  /* Views */
+  .view{display:none}
+  .view.active{display:block}
+     /* Switch button */
+   .switch-btn{position:fixed;right:16px;bottom:16px;z-index:50;appearance:none;border:1px solid var(--border);background:var(--card);color:var(--txt);padding:10px 14px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);cursor:pointer}
+   .switch-btn:hover{background:#f8fafc}
+   
+   /* Auto-scroll for long content */
+   .auto-scroll-container{max-height:50vh;overflow:hidden;position:relative}
+   .auto-scroll-content{transition:transform 15s ease-in-out;padding-bottom:40px;padding-top:0;margin-top:0}
+   .auto-scroll-content.scrolling{animation:autoScroll 25s linear infinite}
+   
+   @keyframes autoScroll{
+     0%{transform:translateY(0)}
+     100%{transform:translateY(-100%)}
+   }
+   
+   /* 자동 스크롤 시 제목과 겹치지 않도록 조정 */
+   .auto-scroll-content.scrolling ul{
+     margin-top:0;
+     padding-top:0;
+   }
+   
+   /* 제목과 내용 사이 간격 확보 */
+   .auto-scroll-container h2{
+     margin:0;
+     position:sticky;
+     top:0;
+     z-index:10;
+     background:var(--card);
+     border-bottom:1px solid var(--border);
+     padding:0px 10px 4px 10px;
+   }
+   
+   /* 자동 스크롤 컨텐츠가 제목 아래에서 시작하도록 */
+   .auto-scroll-content{
+     position:relative;
+     z-index:1;
+     margin-top:0;
+     padding-top:0;
+   }
+   
+   /* Scroll indicator - 숨김 처리 */
+   .scroll-indicator{display:none}
+   
+       /* 1024x768 해상도 최적화 */
+    @media (max-width:1024px) and (max-height:800px){
+      .auto-scroll-container{max-height:45vh}
+      .auto-scroll-content.scrolling{animation-duration:20s}
+      .card{padding:12px}
+      h1{font-size:22px;margin-bottom:10px}
+      .card h2{font-size:18px;margin-bottom:8px}
+      ul{font-size:14px}
+      ul ul li{font-size:13px}
+      ul ul ul li{font-size:12px}
+      
+      /* 작은 화면에서 제목과 내용 간격 조정 */
+      .auto-scroll-content{padding-bottom:30px}
+      .card h2{margin-bottom:6px}
+    }
+
+  /* 제목(h2) 위로 올라오는 스크롤 글씨 가리개 */
+  .auto-scroll-container { position: relative; overflow: hidden; } /* 이미 있으면 중복돼도 무방 */
+
+  .auto-scroll-container::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:40px;                /* h2 높이에 맞춰 32~44px 사이로 필요시 조정 */
+    background: var(--card);    /* 카드 배경과 동일 */
+    z-index:9;                  /* h2(=10) 아래, 스크롤 내용(=1) 위 */
+    pointer-events:none;        /* 클릭 막지 않도록 */
+  }    
+</style>
+
+<div class="wrap">
+
+  <div id="view-main" class="view active">
+    <h1>연구실 일정 (Lab Schedule)</h1>
+    <div class="grid">
+      <section class="card calendar-card">
+        <h2>달력</h2>
+        <div class="calendar">
+          <div class="cal-header">
+            <div class="cal-title" id="cal-title">Loading…</div>
+            <div class="cal-nav">
+              <button type="button" id="cal-prev" aria-label="이전 달">◀</button>
+              <button type="button" id="cal-today" aria-label="오늘">오늘</button>
+              <button type="button" id="cal-next" aria-label="다음 달">▶</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>        
+      </section>
+    </div>
+  </div>
+
+  <div id="view-notice" class="view">
+    <h1>연구실 공지 (Lab Notice)</h1>
+    <section class="card">
+      <h2>공지사항</h2>
+      <ul id="notice-list">
+        <li>공지사항이 없습니다.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div id="view-lab-rules" class="view">
+    <h1>연구실 규칙 (Lab Rules)</h1>
+    <section class="card">
+      <h2>연구실 규칙</h2>
+      <ul id="lab-rules-list">
+        <li>규칙을 불러오는 중…</li>
+      </ul>
+    </section>
+  </div>
+
+  <div id="view-workroom-rules" class="view">
+    <h1>작업실 사용 규칙 (Workroom Rules)</h1>
+    <section class="card">
+      <h2>작업실 사용 규칙</h2>
+      <ul id="workroom-rules-list">
+        <li>규칙을 불러오는 중…</li>
+      </ul>
+    </section>
+  </div>
+
+  <button id="switch-view" class="switch-btn" aria-label="다음 페이지로 이동">다음 페이지</button>
+
+  <p class="footer">© 2025 HUR Lab</p>
+
+  <script>
+    (function(){
+      const gridEl = document.getElementById('cal-grid');
+      const titleEl = document.getElementById('cal-title');
+      const btnPrev = document.getElementById('cal-prev');
+      const btnNext = document.getElementById('cal-next');
+      const btnToday = document.getElementById('cal-today');
+             const views = ['view-main','view-notice','view-lab-rules','view-workroom-rules'];
+      let viewIndex = 0;
+      const btnSwitch = document.getElementById('switch-view');
+
+      const today = new Date();
+      let viewYear = today.getFullYear();
+      let viewMonth = today.getMonth(); // 0-11
+      let eventsByDate = new Map(); // key: YYYY-MM-DD, value: [{time:'14:00', title:'...'}]
+
+      const weekdayLabels = ['일','월','화','수','목','금','토'];
+
+      const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQoR9xFhbi9YHVstJxroP4y-1ttUWyAnq-bKFonSIZb_kxZLpvw3FvXzASF-YfVop1P4PDkFfRAWPam/pub?gid=0&single=true&output=csv';
+      // 여러 JC 시트 URL을 배열로 관리
+      const JC_CSV_URLS = [
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2gkzKPsh3Y23lKsvy3YCNvVd2W3c-jy4mZYbtPSRG1W-NseCmwo1rSWFixUE1yi-Zx77mLzFlvx69/pub?gid=0&single=true&output=csv',
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2gkzKPsh3Y23lKsvy3YCNvVd2W3c-jy4mZYbtPSRG1W-NseCmwo1rSWFixUE1yi-Zx77mLzFlvx69/pub?gid=652944038&single=true&output=csv'
+        // 여기에 추가 시트 URL들을 추가하세요
+        // 예: 'https://docs.google.com/spreadsheets/d/e/다른시트URL/pub?output=csv'
+      ];
+
+      // 호환성: fetch 없을 때 XHR로 대체하여 텍스트를 가져오기
+      function fetchText(url){
+        // cache buster
+        var u = url + (url.indexOf('?')>-1 ? '&' : '?') + 'v=' + Date.now();
+        if (window.fetch){
+          return fetch(u, { cache: 'no-store' }).then(function(res){
+            if (!res.ok) throw new Error('HTTP '+res.status);
+            return res.text();
+          });
+        }
+        return new Promise(function(resolve, reject){
+          try{
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', u, true);
+            xhr.onreadystatechange = function(){
+              if (xhr.readyState === 4){
+                if (xhr.status >= 200 && xhr.status < 300){
+                  resolve(xhr.responseText);
+                } else {
+                  reject(new Error('HTTP '+xhr.status));
+                }
+              }
+            };
+            xhr.send();
+          }catch(e){ reject(e); }
+        });
+      }
+
+      // CSV 안전 파서: 따옴표/쉼표 포함 셀도 처리
+      function parseCSV(text){
+        const rows = [];
+        let cur = [''], i = 0, inQuotes = false;
+
+        for (let c of text) {
+          if (c === '"') { inQuotes = !inQuotes; continue; }
+          if (c === ',' && !inQuotes) { cur.push(''); i++; continue; }
+          if ((c === '\n' || c === '\r') && !inQuotes) {
+            rows.push(cur.map(s=>s.trim()));
+            cur = ['']; i = 0; continue;
+          }
+          cur[i] += c;
+        }
+        if (cur.some(s => s.length)) rows.push(cur.map(s=>s.trim()));
+        return rows.filter(r => !(r.length === 1 && r[0] === ''));
+      }
+
+      // 0~9 → 01
+      function pad2(n){ return String(n).padStart(2,'0'); }
+
+      // 다양한 날짜 표기 → YYYY-MM-DD 로 정규화
+      function normalizeDate(s){
+        if (!s) return null;
+        s = String(s).trim();
+
+        // "2025. 8. 29" / "2025-8-29" / "2025/8/29"
+        let m = s.match(/^(\d{4})[.\-\/\s년]*\s*(\d{1,2})[.\-\/\s월]*\s*(\d{1,2})/);
+        if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+
+        // "8.29" / "8/29" / "8-29" → 올해로 간주
+        m = s.match(/^(\d{1,2})[.\-\/\s월]*\s*(\d{1,2})/);
+        if (m) {
+          const y = new Date().getFullYear();
+          return `${y}-${pad2(m[1])}-${pad2(m[2])}`;
+        }
+
+        // "8월 29일"
+        m = s.match(/^(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+        if (m) {
+          const y = new Date().getFullYear();
+          return `${y}-${pad2(m[1])}-${pad2(m[2])}`;
+        }
+
+        // 이미 YYYY-MM-DD 일 수 있음
+        m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+
+        return null; // 못 알아들음
+      }
+
+      // 다양한 시간 표기 → HH:MM 로 정규화
+      function normalizeTime(s){
+        if (!s) return '00:00';
+        s = String(s).trim();
+
+        // "14:00" or "14:00:00"
+        let m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+        if (m) return `${pad2(m[1])}:${pad2(m[2])}`;
+
+        // "14시", "14시 30분"
+        m = s.match(/^(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?$/);
+        if (m) return `${pad2(m[1])}:${pad2(m[2] || '0')}`;
+
+        return s; // 마지막 수단: 그대로 (달력 정렬은 문자열 비교)
+      }
+
+      // 로컬 events 파일 파서 (fallback)
+      async function loadLocalEvents(){
+        try{
+          const text = await fetchText('events/events.txt');
+          const lines = text.split(/\r?\n/);
+          // 허용 형식: [YYYY년 ]M월 D일 (H시[ M분]? | HH:MM) 제목
+          const rx = /^\s*(?:(\d{4})년\s*)?(\d{1,2})월\s*(\d{1,2})일\s*(?:(\d{1,2})(?::(\d{2}))?\s*시?|\s*(\d{1,2}):(\d{2}))\s+(.+?)\s*$/;
+          const defaultYear = (new Date()).getFullYear();
+          for (var i=0;i<lines.length;i++){
+            var line = lines[i];
+            if (!line || /^\s*#/.test(line)) continue;
+            var m = line.match(rx);
+            if (!m) continue;
+            var year = m[1] ? Number(m[1]) : defaultYear;
+            var month = Number(m[2]);
+            var day = Number(m[3]);
+            var hourFromSi = (m[4] !== undefined) ? Number(m[4]) : (m[6] !== undefined ? Number(m[6]) : 0);
+            var minuteFromSi = (m[5] !== undefined) ? Number(m[5]) : (m[7] !== undefined ? Number(m[7]) : 0);
+            var hour = hourFromSi;
+            var minute = minuteFromSi;
+            var title = m[8];
+            var key = year + '-' + pad2(month) + '-' + pad2(day);
+            var item = { time: pad2(hour)+':'+pad2(minute), title: title };
+            if (!eventsByDate.has(key)) eventsByDate.set(key, []);
+            eventsByDate.get(key).push(item);
+          }
+          // sort
+          for (const [k, arr] of eventsByDate){ arr.sort(function(a,b){ return a.time.localeCompare(b.time); }); }
+        }catch(e){
+          console.warn('로컬 이벤트 파일 로드 실패:', e);
+        }
+      }
+
+      async function loadEvents(){
+        try{
+          const text = await fetchText(CSV_URL);
+          const rows = parseCSV(text);
+          // 헤더 찾기: "날짜", "시간", "제목" (대소문자 무시)
+          const header = rows[0].map(h => h.replace(/\s+/g,'').toLowerCase());
+          const iDate = header.findIndex(h => ['날짜','date'].includes(h));
+          const iTime = header.findIndex(h => ['시간','time'].includes(h));
+          const iTitle= header.findIndex(h => ['제목','title'].includes(h));
+          if (iDate < 0 || iTime < 0 || iTitle < 0) {
+            console.warn('CSV 헤더를 찾지 못했습니다. (날짜/시간/제목) — 로컬 이벤트로 대체');
+            await loadLocalEvents();
+            return;
+          }
+          const map = new Map();
+          for (let r = 1; r < rows.length; r++){
+            const row = rows[r];
+            if (!row || row.length === 0) continue;
+            const d = normalizeDate(row[iDate]);
+            const t = normalizeTime(row[iTime]);
+            const title = (row[iTitle] || '').trim();
+            if (!d || !title) continue;
+            if (!map.has(d)) map.set(d, []);
+            map.get(d).push({ time: t, title });
+          }
+          // 정렬
+          for (const [k, arr] of map){ arr.sort((a,b)=> a.time.localeCompare(b.time)); }
+          eventsByDate = map;
+        }catch(e){
+          console.warn('원격 CSV 이벤트 로드 실패, 로컬 이벤트로 대체:', e);
+          await loadLocalEvents();
+        }
+      }
+
+      async function loadJC(){
+        try{
+          // 여러 시트의 데이터를 순차적으로 로드
+          for (const url of JC_CSV_URLS) {
+            try {
+              const text = await fetchText(url);
+              const rows = parseCSV(text);
+              if (!rows || rows.length === 0) continue;
+              
+              const header = rows[0].map(h => h.replace(/\s+/g,'').toLowerCase());
+              const iDate = header.findIndex(h => ['날짜','date'].includes(h));
+              const iName = header.findIndex(h => ['이름','name'].includes(h));
+              if (iDate < 0 || iName < 0) continue;
+              
+              for (let r=1; r<rows.length; r++){
+                const row = rows[r];
+                if (!row || row.length === 0) continue;
+                const normDate = normalizeDate(row[iDate]);
+                const name = (row[iName] || '').trim();
+                if (!normDate || !name || name === '없음') continue;
+                if (!eventsByDate.has(normDate)) eventsByDate.set(normDate, []);
+                eventsByDate.get(normDate).push({ time: '10:00', title: `JC ${name}` });
+              }
+            } catch (e) {
+              console.warn(`JC 시트 로드 실패 (${url}):`, e);
+            }
+          }
+          
+          // Ensure JC badges appear in order by time then title
+          for (const [k, arr] of eventsByDate){
+            arr.sort((a,b)=> a.time.localeCompare(b.time) || a.title.localeCompare(b.title));
+          }
+        }catch(e){
+          console.warn('JC 일정 로드 실패:', e);
+        }
+      }
+
+
+      function render(){
+        // Title
+        titleEl.textContent = `${viewYear}년 ${String(viewMonth+1).padStart(2,'0')}월`;
+
+        // Clear
+        gridEl.innerHTML = '';
+
+        // Weekday header
+        for (let i=0;i<7;i++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-dow';
+          cell.textContent = weekdayLabels[i];
+          gridEl.appendChild(cell);
+        }
+
+        // Dates
+        const firstOfMonth = new Date(viewYear, viewMonth, 1);
+        const startWeekday = firstOfMonth.getDay(); // 0 Sun - 6 Sat
+        const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+        const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+        // Leading days from previous month
+        for (let i=0; i<startWeekday; i++){
+          const dayNum = daysInPrev - startWeekday + 1 + i;
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-muted';
+          cell.textContent = String(dayNum);
+          gridEl.appendChild(cell);
+        }
+
+        // Current month days
+        for (let d=1; d<=daysInMonth; d++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell';
+          cell.textContent = String(d);
+          if (
+            viewYear === today.getFullYear() &&
+            viewMonth === today.getMonth() &&
+            d === today.getDate()
+          ){
+            cell.classList.add('cal-today');
+          }
+          // Events
+          const eventsKey = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
+          const events = eventsByDate.get(eventsKey);
+          if (events && events.length){
+            const list = document.createElement('div');
+            list.className = 'cal-events';
+            for (const ev of events){
+              const badge = document.createElement('div');
+              badge.className = 'cal-event';
+              badge.textContent = `${ev.time} · ${ev.title}`;
+              list.appendChild(badge);
+            }
+            cell.appendChild(list);
+          }
+          gridEl.appendChild(cell);
+        }
+
+        // Trailing days from next month to fill the grid (rows of 7)
+        const totalCells = gridEl.children.length;
+        const remainder = totalCells % 7;
+        const fill = remainder === 0 ? 0 : 7 - remainder;
+        for (let i=1; i<=fill; i++){
+          const cell = document.createElement('div');
+          cell.className = 'cal-cell cal-muted';
+          cell.textContent = String(i);
+          gridEl.appendChild(cell);
+        }
+      }
+
+      btnPrev.addEventListener('click', () => {
+        if (viewMonth === 0){ viewMonth = 11; viewYear--; } else { viewMonth--; }
+        render();
+      });
+      btnNext.addEventListener('click', () => {
+        if (viewMonth === 11){ viewMonth = 0; viewYear++; } else { viewMonth++; }
+        render();
+      });
+      btnToday.addEventListener('click', () => {
+        viewYear = today.getFullYear();
+        viewMonth = today.getMonth();
+        render();
+      });
+
+      function showView(index){
+        viewIndex = index % views.length;
+        for (const id of views){
+          const el = document.getElementById(id);
+          if (el) el.classList.remove('active');
+        }
+        const active = document.getElementById(views[viewIndex]);
+        if (active) active.classList.add('active');
+      }
+
+             // 초기 뷰 및 자동 전환(1분)
+       if (location.hash === '#notice') viewIndex = 1;
+       else if (location.hash === '#lab-rules') viewIndex = 2;
+       else if (location.hash === '#workroom-rules') viewIndex = 3;
+       else viewIndex = 0;
+      showView(viewIndex);
+      setInterval(()=>{ showView(viewIndex+1); }, 60000);
+      if (btnSwitch){
+        btnSwitch.addEventListener('click', () => {
+          showView(viewIndex+1);
+        });
+      }
+
+      function updateTodayList(){
+        const list = document.getElementById('today-list');
+        if (!list) return;
+        const key = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+        const items = eventsByDate.get(key) || [];
+        list.innerHTML = '';
+        if (items.length === 0){
+          const li = document.createElement('li');
+          li.textContent = '오늘 일정 없음';
+          list.appendChild(li);
+          return;
+        }
+        for (const ev of items){
+          const li = document.createElement('li');
+          li.textContent = `${ev.time} ${ev.title}`;
+          list.appendChild(li);
+        }
+      }
+
+      async function loadNotices(){
+        const ul = document.getElementById('notice-list');
+        if (!ul) {
+          console.log('공지사항 리스트 요소를 찾을 수 없습니다.');
+          return;
+        }
+        
+        try{
+          console.log('공지사항 로딩 시작...');
+          const text = await fetchText('notices/notices.txt');
+          console.log('로드된 텍스트 길이:', text.length);
+          console.log('텍스트 내용 (처음 200자):', text.substring(0, 200));
+          
+          const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(s=>s && !s.startsWith('#'));
+          console.log('필터링된 라인 수:', lines.length);
+          console.log('라인 내용:', lines);
+          
+          ul.innerHTML = '';
+          if (lines.length === 0){ 
+            ul.innerHTML = '<li>공지 없음</li>'; 
+            return; 
+          }
+          
+          for (let i = 0; i < lines.length; i++){
+            const line = lines[i];
+            if (!line) continue;
+            
+            const li = document.createElement('li');
+            li.textContent = line;
+            ul.appendChild(li);
+            
+            // 다음 줄들이 하위 항목인지 확인
+            let j = i + 1;
+            let hasSubItems = false;
+            while (j < lines.length && (lines[j].startsWith('-') || lines[j].startsWith('*'))){
+              if (!hasSubItems) {
+                const subUl = document.createElement('ul');
+                li.appendChild(subUl);
+                hasSubItems = true;
+              }
+              const subLi = document.createElement('li');
+              subLi.textContent = lines[j].substring(1).trim();
+              li.querySelector('ul').appendChild(subLi);
+              j++;
+            }
+            i = j - 1; // 다음 메인 항목으로 건너뛰기
+          }
+          
+          console.log('공지사항 로딩 완료');
+        }catch(e){
+          console.error('공지사항 로드 중 오류 발생:', e);
+          const ul = document.getElementById('notice-list');
+          if (ul) ul.innerHTML = '<li>공지 로드 오류: ' + e.message + '</li>';
+        }
+      }
+
+      async function loadLabRules(){
+        const ul = document.getElementById('lab-rules-list');
+        if (!ul) return;
+        try{
+          const text = await fetchText('rules/lab_rules.txt');
+          const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(s=>s && !s.startsWith('#'));
+          ul.innerHTML = '';
+          if (lines.length === 0){ ul.innerHTML = '<li>규칙 없음</li>'; return; }
+          
+          for (let i = 0; i < lines.length; i++){
+            const line = lines[i];
+            if (!line) continue;
+            
+            const li = document.createElement('li');
+            li.textContent = line;
+            ul.appendChild(li);
+            
+            // 다음 줄들이 하위 항목인지 확인
+            let j = i + 1;
+            let hasSubItems = false;
+            while (j < lines.length && (lines[j].startsWith('-') || lines[j].startsWith('*'))){
+              if (!hasSubItems) {
+                const subUl = document.createElement('ul');
+                li.appendChild(subUl);
+                hasSubItems = true;
+              }
+              const subLi = document.createElement('li');
+              subLi.textContent = lines[j].substring(1).trim();
+              li.querySelector('ul').appendChild(subLi);
+              j++;
+            }
+            i = j - 1; // 다음 메인 항목으로 건너뛰기
+          }
+        }catch(e){
+          const ul = document.getElementById('lab-rules-list');
+          if (ul) ul.innerHTML = '<li>규칙 로드 오류</li>';
+        }
+      }
+
+      async function loadWorkroomRules(){
+        const ul = document.getElementById('workroom-rules-list');
+        if (!ul) return;
+        try{
+          const text = await fetchText('rules/workroom_rules.txt');
+          const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(s=>s && !s.startsWith('#'));
+          ul.innerHTML = '';
+          if (lines.length === 0){ ul.innerHTML = '<li>규칙 없음</li>'; return; }
+          
+          for (let i = 0; i < lines.length; i++){
+            const line = lines[i];
+            if (!line) continue;
+            
+            const li = document.createElement('li');
+            li.textContent = line;
+            ul.appendChild(li);
+            
+            // 다음 줄들이 하위 항목인지 확인
+            let j = i + 1;
+            let hasSubItems = false;
+            while (j < lines.length && (lines[j].startsWith('-') || lines[j].startsWith('*'))){
+              if (!hasSubItems) {
+                const subUl = document.createElement('ul');
+                li.appendChild(subUl);
+                hasSubItems = true;
+              }
+              const subLi = document.createElement('li');
+              subLi.textContent = lines[j].substring(1).trim();
+              li.querySelector('ul').appendChild(subLi);
+              j++;
+            }
+            i = j - 1; // 다음 메인 항목으로 건너뛰기
+          }
+        }catch(e){
+          const ul = document.getElementById('workroom-rules-list');
+          if (ul) ul.innerHTML = '<li>규칙 로드 오류</li>';
+        }
+      }
+
+             loadEvents()
+        .catch(function(){ /* 에러는 내부에서 처리됨 */ })
+        .then(function(){ return loadJC().catch(function(){ /* 무시 */ }); })
+        .then(function(){ render(); updateTodayList(); });
+       loadNotices();
+       loadLabRules();
+       loadWorkroomRules();
+       
+      })();
+    </script>
+  </div>
