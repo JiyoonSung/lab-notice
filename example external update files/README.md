@@ -4,5 +4,5 @@ This branch has the update tasks that update the information from external files
 
 ## The list of the files
 
-1. 2025_journal_club.xlsx
+1. 2026_journal_club.xlsx
 2. HUR Group schedule_file.xlsx

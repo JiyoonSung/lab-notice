@@ -185,7 +185,7 @@
 
   <button id="switch-view" class="switch-btn" aria-label="다음 페이지로 이동">다음 페이지</button>
 
-  <p class="footer">© 2025 HUR Lab</p>
+  <p class="footer">© 2026 HUR Lab</p>
 
   <script>
     (function(){
@@ -268,7 +268,7 @@
         if (!s) return null;
         s = String(s).trim();
 
-        // "2025. 8. 29" / "2025-8-29" / "2025/8/29"
+        // "2026. 8. 29" / "2026-8-29" / "2026/8/29"
         let m = s.match(/^(\d{4})[.\-\/\s년]*\s*(\d{1,2})[.\-\/\s월]*\s*(\d{1,2})/);
         if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
 
