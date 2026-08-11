@@ -215,6 +215,7 @@
         // 여기에 추가 시트 URL들을 추가하세요
         // 예: 'https://docs.google.com/spreadsheets/d/e/다른시트URL/pub?output=csv'
       ];
+      const FETCH_TIMEOUT_MS = 5000;
 
       // 2026년 하반기 대한민국 공휴일 및 대체공휴일
       // 기준: 한국천문연구원 2026년 월력요항 및 2026년 개정 관공서 공휴일 규정
@@ -237,7 +238,9 @@
         items.sort((a, b) => {
           const timeCompare = (a.time || '00:00').localeCompare(b.time || '00:00');
           if (timeCompare) return timeCompare;
-          const kindCompare = (kindOrder[a.kind] ?? 1) - (kindOrder[b.kind] ?? 1);
+          const aKindOrder = kindOrder[a.kind] !== undefined ? kindOrder[a.kind] : 1;
+          const bKindOrder = kindOrder[b.kind] !== undefined ? kindOrder[b.kind] : 1;
+          const kindCompare = aKindOrder - bKindOrder;
           return kindCompare || a.title.localeCompare(b.title);
         });
       }
@@ -245,9 +248,26 @@
       function loadHolidays(){
         for (const holiday of HOLIDAYS_2026_H2){
           if (!eventsByDate.has(holiday.date)) eventsByDate.set(holiday.date, []);
-          eventsByDate.get(holiday.date).push({ time: '', title: holiday.title, kind: 'holiday' });
+          const items = eventsByDate.get(holiday.date);
+          const alreadyAdded = items.some(item => item.kind === 'holiday' && item.title === holiday.title);
+          if (!alreadyAdded) items.push({ time: '', title: holiday.title, kind: 'holiday' });
         }
         for (const items of eventsByDate.values()) sortCalendarEvents(items);
+      }
+
+      function withTimeout(promise, url){
+        return new Promise(function(resolve, reject){
+          var timer = setTimeout(function(){
+            reject(new Error('요청 시간 초과: ' + url));
+          }, FETCH_TIMEOUT_MS);
+          promise.then(function(value){
+            clearTimeout(timer);
+            resolve(value);
+          }, function(error){
+            clearTimeout(timer);
+            reject(error);
+          });
+        });
       }
 
       // 호환성: fetch 없을 때 XHR로 대체하여 텍스트를 가져오기
@@ -255,15 +275,19 @@
         // cache buster
         var u = url + (url.indexOf('?')>-1 ? '&' : '?') + 'v=' + Date.now();
         if (window.fetch){
-          return fetch(u, { cache: 'no-store' }).then(function(res){
+          var request = fetch(u, { cache: 'no-store' }).then(function(res){
             if (!res.ok) throw new Error('HTTP '+res.status);
             return res.text();
           });
+          return withTimeout(request, url);
         }
         return new Promise(function(resolve, reject){
           try{
             var xhr = new XMLHttpRequest();
             xhr.open('GET', u, true);
+            xhr.timeout = FETCH_TIMEOUT_MS;
+            xhr.ontimeout = function(){ reject(new Error('요청 시간 초과: ' + url)); };
+            xhr.onerror = function(){ reject(new Error('네트워크 오류: ' + url)); };
             xhr.onreadystatechange = function(){
               if (xhr.readyState === 4){
                 if (xhr.status >= 200 && xhr.status < 300){
@@ -712,10 +736,22 @@
         }
       }
 
+      function refreshCalendar(){
+        loadHolidays();
+        render();
+        updateTodayList();
+      }
+
+      // 네트워크 응답을 기다리지 않고 달력과 공휴일을 즉시 표시한다.
+      refreshCalendar();
+
       loadEvents()
         .catch(function(){ /* 에러는 내부에서 처리됨 */ })
-        .then(function(){ return loadJC().catch(function(){ /* 무시 */ }); })
-        .then(function(){ loadHolidays(); render(); updateTodayList(); });
+        .then(function(){
+          refreshCalendar();
+          return loadJC().catch(function(){ /* 무시 */ });
+        })
+        .then(function(){ refreshCalendar(); });
        loadNotices();
        loadLabRules();
        loadWorkroomRules();
