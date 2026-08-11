@@ -31,6 +31,7 @@
   .cal-dow{font-weight:600;background:#f8fafc}
   .cal-muted{opacity:.45}
   .cal-today{outline:2px solid var(--acc);outline-offset:2px}
+  .cal-holiday{color:#b91c1c;border-color:#fecaca}
   .calendar-card{grid-column:1 / -1}
 
   /* Fit for 1024x768: tighten spacing and calendar density */
@@ -56,6 +57,7 @@
   /* Event badges */
   .cal-events{margin-top:6px;display:flex;flex-direction:column;gap:4px;padding:0 6px}
   .cal-event{display:block;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:8px;background:#eef2ff;color:#1e40af;border:1px solid #c7d2fe;padding:2px 6px;font-size:12px;line-height:1.4}
+  .cal-event-holiday{background:#fef2f2;color:#b91c1c;border-color:#fecaca;font-weight:600}
   /* Views */
   .view{display:none}
   .view.active{display:block}
@@ -201,7 +203,7 @@
       const today = new Date();
       let viewYear = today.getFullYear();
       let viewMonth = today.getMonth(); // 0-11
-      let eventsByDate = new Map(); // key: YYYY-MM-DD, value: [{time:'14:00', title:'...'}]
+      let eventsByDate = new Map(); // key: YYYY-MM-DD, value: [{time, title, kind}]
 
       const weekdayLabels = ['일','월','화','수','목','금','토'];
 
@@ -213,6 +215,40 @@
         // 여기에 추가 시트 URL들을 추가하세요
         // 예: 'https://docs.google.com/spreadsheets/d/e/다른시트URL/pub?output=csv'
       ];
+
+      // 2026년 하반기 대한민국 공휴일 및 대체공휴일
+      // 기준: 한국천문연구원 2026년 월력요항 및 2026년 개정 관공서 공휴일 규정
+      const HOLIDAYS_2026_H2 = [
+        { date: '2026-07-17', title: '제헌절' },
+        { date: '2026-08-15', title: '광복절' },
+        { date: '2026-08-17', title: '광복절 대체공휴일' },
+        { date: '2026-09-24', title: '추석 연휴' },
+        { date: '2026-09-25', title: '추석' },
+        { date: '2026-09-26', title: '추석 연휴' },
+        { date: '2026-10-03', title: '개천절' },
+        { date: '2026-10-05', title: '개천절 대체공휴일' },
+        { date: '2026-10-09', title: '한글날' },
+        { date: '2026-12-25', title: '기독탄신일' }
+      ];
+      const HOLIDAY_DATES_2026_H2 = new Set(HOLIDAYS_2026_H2.map(item => item.date));
+
+      function sortCalendarEvents(items){
+        const kindOrder = { holiday: 0, event: 1, jc: 2 };
+        items.sort((a, b) => {
+          const timeCompare = (a.time || '00:00').localeCompare(b.time || '00:00');
+          if (timeCompare) return timeCompare;
+          const kindCompare = (kindOrder[a.kind] ?? 1) - (kindOrder[b.kind] ?? 1);
+          return kindCompare || a.title.localeCompare(b.title);
+        });
+      }
+
+      function loadHolidays(){
+        for (const holiday of HOLIDAYS_2026_H2){
+          if (!eventsByDate.has(holiday.date)) eventsByDate.set(holiday.date, []);
+          eventsByDate.get(holiday.date).push({ time: '', title: holiday.title, kind: 'holiday' });
+        }
+        for (const items of eventsByDate.values()) sortCalendarEvents(items);
+      }
 
       // 호환성: fetch 없을 때 XHR로 대체하여 텍스트를 가져오기
       function fetchText(url){
@@ -395,9 +431,9 @@
                 if (!row || row.length === 0) continue;
                 const normDate = normalizeDate(row[iDate]);
                 const name = (row[iName] || '').trim();
-                if (!normDate || !name || name === '없음') continue;
+                if (!normDate || !name || name === '없음' || HOLIDAY_DATES_2026_H2.has(normDate)) continue;
                 if (!eventsByDate.has(normDate)) eventsByDate.set(normDate, []);
-                eventsByDate.get(normDate).push({ time: '10:00', title: `JC ${name}` });
+                eventsByDate.get(normDate).push({ time: '10:00', title: `JC ${name}`, kind: 'jc' });
               }
             } catch (e) {
               console.warn(`JC 시트 로드 실패 (${url}):`, e);
@@ -406,7 +442,7 @@
           
           // Ensure JC badges appear in order by time then title
           for (const [k, arr] of eventsByDate){
-            arr.sort((a,b)=> a.time.localeCompare(b.time) || a.title.localeCompare(b.title));
+            sortCalendarEvents(arr);
           }
         }catch(e){
           console.warn('JC 일정 로드 실패:', e);
@@ -458,14 +494,15 @@
           }
           // Events
           const eventsKey = `${viewYear}-${pad2(viewMonth+1)}-${pad2(d)}`;
+          if (HOLIDAY_DATES_2026_H2.has(eventsKey)) cell.classList.add('cal-holiday');
           const events = eventsByDate.get(eventsKey);
           if (events && events.length){
             const list = document.createElement('div');
             list.className = 'cal-events';
             for (const ev of events){
               const badge = document.createElement('div');
-              badge.className = 'cal-event';
-              badge.textContent = `${ev.time} · ${ev.title}`;
+              badge.className = `cal-event cal-event-${ev.kind || 'event'}`;
+              badge.textContent = ev.time ? `${ev.time} · ${ev.title}` : ev.title;
               list.appendChild(badge);
             }
             cell.appendChild(list);
@@ -536,7 +573,7 @@
         }
         for (const ev of items){
           const li = document.createElement('li');
-          li.textContent = `${ev.time} ${ev.title}`;
+          li.textContent = ev.time ? `${ev.time} ${ev.title}` : ev.title;
           list.appendChild(li);
         }
       }
@@ -675,10 +712,10 @@
         }
       }
 
-             loadEvents()
+      loadEvents()
         .catch(function(){ /* 에러는 내부에서 처리됨 */ })
         .then(function(){ return loadJC().catch(function(){ /* 무시 */ }); })
-        .then(function(){ render(); updateTodayList(); });
+        .then(function(){ loadHolidays(); render(); updateTodayList(); });
        loadNotices();
        loadLabRules();
        loadWorkroomRules();
