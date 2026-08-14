@@ -58,7 +58,9 @@
   .cal-events{margin-top:6px;display:flex;flex-direction:column;gap:4px;padding:0 6px}
   .cal-event{display:block;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:8px;background:#eef2ff;color:#1e40af;border:1px solid #c7d2fe;padding:2px 6px;font-size:12px;line-height:1.4}
   .cal-event-holiday{background:#fef2f2;color:#b91c1c;border-color:#fecaca;font-weight:600}
-  .cal-event-travel{background:#ecfdf5;color:#047857;border-color:#a7f3d0;font-weight:600}
+  .cal-event-travel{background:#ecfdf5;color:#047857;border-color:#a7f3d0;font-weight:600;white-space:normal}
+  .cal-event-travel-title,.cal-event-travel-participants{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cal-event-travel-participants{font-size:11px;font-weight:500}
   /* Views */
   .view{display:none}
   .view.active{display:block}
@@ -527,11 +529,10 @@
             if (!startDate || !endDate || !title) continue;
 
             const participantSummary = summarizeParticipants(participants);
-            const badgeTitle = participantSummary ? `${title} · ${participantSummary}` : title;
             const fullTitle = participants ? `${title} · ${participants}` : title;
             const validRange = forEachDateInRange(startDate, endDate, function(dateKey){
               if (!eventsByDate.has(dateKey)) eventsByDate.set(dateKey, []);
-              eventsByDate.get(dateKey).push({ time: '', title: badgeTitle, fullTitle: fullTitle, kind: 'travel' });
+              eventsByDate.get(dateKey).push({ time: '', title: title, subtitle: participantSummary, fullTitle: fullTitle, kind: 'travel' });
             });
             if (!validRange) console.warn(`출장·학회 날짜 범위 오류: ${startDate} ~ ${endDate}`);
           }
@@ -595,7 +596,18 @@
             for (const ev of events){
               const badge = document.createElement('div');
               badge.className = `cal-event cal-event-${ev.kind || 'event'}`;
-              badge.textContent = ev.time ? `${ev.time} · ${ev.title}` : ev.title;
+              if (ev.kind === 'travel' && ev.subtitle){
+                const titleLine = document.createElement('span');
+                titleLine.className = 'cal-event-travel-title';
+                titleLine.textContent = ev.title;
+                const participantLine = document.createElement('span');
+                participantLine.className = 'cal-event-travel-participants';
+                participantLine.textContent = ev.subtitle;
+                badge.appendChild(titleLine);
+                badge.appendChild(participantLine);
+              }else{
+                badge.textContent = ev.time ? `${ev.time} · ${ev.title}` : ev.title;
+              }
               if (ev.fullTitle) badge.title = ev.fullTitle;
               list.appendChild(badge);
             }
