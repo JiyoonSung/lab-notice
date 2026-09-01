@@ -214,13 +214,10 @@
       const weekdayLabels = ['일','월','화','수','목','금','토'];
 
       const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQoR9xFhbi9YHVstJxroP4y-1ttUWyAnq-bKFonSIZb_kxZLpvw3FvXzASF-YfVop1P4PDkFfRAWPam/pub?gid=0&single=true&output=csv';
-      // 여러 JC 시트 URL을 배열로 관리
       const JC_CSV_URLS = [
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2gkzKPsh3Y23lKsvy3YCNvVd2W3c-jy4mZYbtPSRG1W-NseCmwo1rSWFixUE1yi-Zx77mLzFlvx69/pub?gid=652944038&single=true&output=csv',
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2gkzKPsh3Y23lKsvy3YCNvVd2W3c-jy4mZYbtPSRG1W-NseCmwo1rSWFixUE1yi-Zx77mLzFlvx69/pub?gid=783198874&single=true&output=csv',
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3vqgzkwF2RIbXxIQGJ-OuMBc02OMBAVdmKPBgNH1CDgywCitRU0sxe6oi1yxoXlVjn1ArHvfRO3DZ/pub?gid=1581398552&single=true&output=csv'
-        // 여기에 추가 시트 URL들을 추가하세요
-        // 예: 'https://docs.google.com/spreadsheets/d/e/다른시트URL/pub?output=csv'
       ];
       const TRAVEL_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSqSi1Gzd1cC9z7Qlxt0kF4VuUqEw0ySdIfyJoPMpijp7LVD3QcdoMsTGTuDCWTRLecHNn6qWcpksKc/pub?gid=0&single=true&output=csv';
       const FETCH_TIMEOUT_MS = 5000;
@@ -474,8 +471,8 @@
                 if (!eventsByDate.has(normDate)) eventsByDate.set(normDate, []);
                 eventsByDate.get(normDate).push({
                   time: '10:00',
-                  title: name && name !== '없음' ? `JC ${name}` : 'JC',
-                  subtitle: participants.length ? participants.join(' · ') : '',
+                  title: name || participants.join(' · '),
+                  subtitle: name && participants.length ? participants.join(' · ') : '',
                   kind: 'jc'
                 });
               }
@@ -612,17 +609,18 @@
             for (const ev of events){
               const badge = document.createElement('div');
               badge.className = `cal-event cal-event-${ev.kind || 'event'}`;
-              if (ev.kind === 'jc' && ev.subtitle){
+              if (ev.kind === 'jc'){
                 const titleLine = document.createElement('span');
                 titleLine.className = 'cal-event-jc-title';
                 titleLine.textContent = ev.title;
-                const participantLine = document.createElement('span');
-                participantLine.className = 'cal-event-jc-participants';
-                participantLine.textContent = ev.subtitle;
                 badge.appendChild(titleLine);
-                badge.appendChild(participantLine);
-              }
-              if (ev.kind === 'travel' && ev.subtitle){
+                if (ev.subtitle){
+                  const participantLine = document.createElement('span');
+                  participantLine.className = 'cal-event-jc-participants';
+                  participantLine.textContent = ev.subtitle;
+                  badge.appendChild(participantLine);
+                }
+              } else if (ev.kind === 'travel' && ev.subtitle){
                 const titleLine = document.createElement('span');
                 titleLine.className = 'cal-event-travel-title';
                 titleLine.textContent = ev.title;
