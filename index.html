@@ -34,9 +34,11 @@
   .cal-today{outline:2px solid var(--acc);outline-offset:2px}
   .cal-holiday{color:#b91c1c;border-color:#fecaca}
   .calendar-card{grid-column:1 / -1}
-  .timezone-clock{text-align:right;font-size:13px;line-height:1.45;color:#4b5563}
-  .timezone-clock div{white-space:nowrap}
-  .timezone-clock strong{display:inline-block;min-width:112px;color:var(--txt);font-variant-numeric:tabular-nums}
+  .calendar-card-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+  .calendar-card-heading h2{margin-bottom:0}
+  .timezone-clock{display:flex;align-items:center;gap:8px;text-align:right;font-size:13px;line-height:1.45;color:#4b5563}
+  .timezone-clock span,.timezone-clock strong{white-space:nowrap}
+  .timezone-clock strong{color:var(--txt);font-variant-numeric:tabular-nums}
 
   /* Fit for 1024x768: tighten spacing and calendar density */
   @media (max-width:1024px){
@@ -48,6 +50,7 @@
     .cal-nav button{padding:4px 8px}
     .cal-grid{gap:4px}
     .cal-cell{padding:7px 0}
+    .calendar-card-heading{margin-bottom:8px}
     .timezone-clock{font-size:12px}
   }
   @media (max-height:800px){
@@ -153,15 +156,17 @@
     <h1>연구실 일정 (Lab Schedule)</h1>
     <div class="grid">
       <section class="card calendar-card">
-        <h2>달력</h2>
+        <div class="calendar-card-heading">
+          <h2>달력</h2>
+          <aside class="timezone-clock" aria-label="현재 태평양 시간">
+            <span>PST</span>
+            <strong id="pacific-time">--월 --일 --:--:--</strong>
+          </aside>
+        </div>
         <div class="calendar">
           <div class="cal-header">
             <div class="cal-title" id="cal-title">Loading…</div>
             <div class="cal-controls">
-              <aside class="timezone-clock" aria-label="현재 시간">
-                <div>PST <strong id="pacific-time">--:--:--</strong></div>
-                <div>KST <strong id="korea-time">--:--:--</strong></div>
-              </aside>
               <div class="cal-nav">
                 <button type="button" id="cal-prev" aria-label="이전 달">◀</button>
                 <button type="button" id="cal-today" aria-label="오늘">오늘</button>
@@ -183,7 +188,6 @@
       const btnNext = document.getElementById('cal-next');
       const btnToday = document.getElementById('cal-today');
                 const pacificTimeEl = document.getElementById('pacific-time');
-                const koreaTimeEl = document.getElementById('korea-time');
 
       const today = new Date();
       let viewYear = today.getFullYear();
@@ -683,9 +687,12 @@
 
       function updateClocks(){
         const now = new Date();
-        const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-        pacificTimeEl.textContent = now.toLocaleTimeString('en-US', { ...options, timeZone: 'America/Los_Angeles' });
-        koreaTimeEl.textContent = now.toLocaleTimeString('ko-KR', { ...options, timeZone: 'Asia/Seoul' });
+        const timeZone = 'America/Los_Angeles';
+        const pacificDate = now.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', timeZone });
+        const pacificTime = now.toLocaleTimeString('en-GB', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone
+        });
+        pacificTimeEl.textContent = `${pacificDate} ${pacificTime}`;
       }
 
       updateClocks();
